@@ -7,7 +7,10 @@ import (
 
 type Addition struct {
 	driver.RootPath
-	Cookie string `json:"cookie" required:"true"`
+	Cookie string `json:"cookie"` // optional: filled by QR login when empty; manual cookie paste still supported as fallback
+	// QR login state (frontend re-sends after scanning; server polls on next save).
+	// Hidden from the driver form: it is internal state, not a user input.
+	QRState *qrLoginState `json:"qrcode_state,omitempty" ignore:"true"`
 	//JsToken        string `json:"js_token" type:"string" required:"true"`
 	DownloadAPI    string `json:"download_api" type:"select" options:"official,crack" default:"official"`
 	OrderBy        string `json:"order_by" type:"select" options:"name,time,size" default:"name"`

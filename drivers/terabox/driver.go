@@ -39,17 +39,31 @@ func (d *Terabox) Init(ctx context.Context) error {
 	var resp CheckLoginResp
 	d.base_url = "https://www.terabox.com"
 	d.url_domain_prefix = "jp"
+
+	if d.Cookie == "" {
+		if d.QRState == nil {
+			// Cookie kosong → start QR flow (frontend menampilkan QR page).
+			return d.startQRFlow(ctx)
+		}
+		// State dari form (qrcode_state) → polling QR (user sudah scan + save).
+		return d.loginByQRCodeAt(ctx, qrLoginTimeout, qrPollInterval)
+	}
+
 	_, err := d.get("/api/check/login", nil, &resp)
 	if err != nil {
 		return err
 	}
-	if resp.Errno != 0 {
-		if resp.Errno == 9000 {
-			return fmt.Errorf("terabox is not yet available in this area")
-		}
-		return fmt.Errorf("failed to check login status according to cookie")
+	if resp.Errno == 0 {
+		return nil
 	}
-	return err
+	if resp.Errno == 9000 {
+		return fmt.Errorf("terabox is not yet available in this area")
+	}
+	// Cookie lama kadaluarsa/tidak valid → QR flow
+	if d.QRState != nil {
+		return d.loginByQRCodeAt(ctx, qrLoginTimeout, qrPollInterval)
+	}
+	return d.startQRFlow(ctx)
 }
 
 func (d *Terabox) Drop(ctx context.Context) error {
