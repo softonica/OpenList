@@ -177,6 +177,13 @@ func (d *Terabox) getFiles(dir string) ([]File, error) {
 		if resp.Errno == 9000 {
 			return nil, fmt.Errorf("terabox is not yet available in this area")
 		}
+		// Surface auth/API failures instead of silently rendering an empty
+		// folder: a storage whose login never completed gets errno -6 ("not
+		// logged in", verified live 2026-11-24) and used to look like an
+		// empty-but-working mount.
+		if resp.Errno != 0 {
+			return nil, fmt.Errorf("terabox list failed, errno: %d", resp.Errno)
+		}
 		if len(resp.List) == 0 {
 			break
 		}
